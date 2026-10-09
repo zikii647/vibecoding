@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>政大今天吃什麼？指南山下美食防雷決策器</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script>
+tailwind.config = { theme: { extend: {
+  colors: { ink:'#14231F', pine:'#2F6B57', mist:'#E8EFEC', tag:'#F2C14E', rain:'#4A6FA5' },
+  fontFamily: { sans: ['"Noto Sans TC"','system-ui','sans-serif'] }
+}}};
+</script>
+<style>
+  body { background:#E8EFEC; }
+  .chip[aria-pressed="true"] { background:#14231F; color:#fff; border-color:#14231F; }
+  .reel-in { animation: reel .09s ease-out; }
+  @keyframes reel { from { transform:translateY(-45%); opacity:.15; } to { transform:none; opacity:1; } }
+  @media (prefers-reduced-motion: reduce) { .reel-in { animation:none; } }
+  :focus-visible { outline:3px solid #F2C14E; outline-offset:2px; }
+</style>
+</head>
+<body class="font-sans text-ink antialiased">
+<div class="max-w-5xl mx-auto px-4 py-8 sm:py-12">
+
+  <header class="mb-8">
+    <h1 class="text-4xl sm:text-6xl font-black tracking-tight">政大今天吃什麼？</h1>
+    <p class="mt-2 text-lg text-ink/70">指南山下美食防雷決策器：選好條件，剩下交給籤運。</p>
+  </header>
+
+  <div class="grid lg:grid-cols-[22rem_1fr] gap-6">
+    <!-- 篩選 -->
+    <section class="bg-white rounded-2xl p-6 space-y-6" aria-label="情境篩選">
+      <div>
+        <h2 class="font-bold mb-3">想去哪一區</h2>
+        <div class="flex flex-wrap gap-2">
+          <button class="chip rounded-full border border-ink/20 px-4 py-2 text-sm font-medium" data-g="zone" data-v="全部">全部</button>
+          <button class="chip rounded-full border border-ink/20 px-4 py-2 text-sm font-medium" data-g="zone" data-v="指南路">指南路</button>
+          <button class="chip rounded-full border border-ink/20 px-4 py-2 text-sm font-medium" data-g="zone" data-v="側門">側門</button>
+          <button class="chip rounded-full border border-ink/20 px-4 py-2 text-sm font-medium" data-g="zone" data-v="山上">山上</button>
+        </div>
+      </div>
+      <div>
+        <h2 class="font-bold mb-3">預算</h2>
+        <div class="flex flex-wrap gap-2">
+          <button class="chip rounded-full border border-ink/20 px-4 py-2 text-sm font-medium" data-g="budget" data-v="0">不限</button>
+          <button class="chip rounded-full border border-ink/20 px-4 py-2 text-sm font-medium" data-g="budget" data-v="100">100 內</button>
+          <button class="chip rounded-full border border-ink/20 px-4 py-2 text-sm font-medium" data-g="budget" data-v="150">150 內</button>
+        </div>
+      </div>
+      <button id="rain" role="switch" aria-checked="false" class="group w-full flex items-center justify-between gap-4 rounded-xl bg-mist px-4 py-3 text-left">
+        <span>
+          <span class="block font-bold">雨天懶人模式</span>
+          <span class="block text-sm text-ink/60">只抽不用爬山、離側門近的店</span>
+        </span>
+        <span class="shrink-0 w-12 h-7 rounded-full bg-ink/25 group-aria-checked:bg-rain p-1 transition-colors">
+          <span class="block w-5 h-5 rounded-full bg-white transition-transform group-aria-checked:translate-x-5"></span>
+        </span>
+      </button>
+    </section>
+
+    <!-- 抽籤 -->
+    <section class="bg-ink text-white rounded-3xl p-6 sm:p-8 flex flex-col" aria-label="抽籤">
+      <p class="text-white/60">目前符合條件：<b id="cnt" class="text-white text-xl">0</b> 家</p>
+      <div class="my-6 h-44 rounded-2xl bg-white text-ink border-l-[10px] border-tag grid place-items-center text-center px-4 overflow-hidden" aria-live="polite">
+        <div id="reel">
+          <p class="text-2xl sm:text-3xl font-black">按下「抽」決定今天吃哪家</p>
+        </div>
+      </div>
+      <button id="drawBtn" class="bg-tag text-ink font-black text-3xl py-5 rounded-2xl hover:brightness-105 active:scale-[.99] disabled:opacity-50 disabled:cursor-not-allowed">抽！</button>
+      <p id="hint" class="mt-3 text-sm text-white/60 min-h-[1.25rem]"></p>
+    </section>
+  </div>
+
+  <!-- 店家管理 -->
+  <section class="mt-10" aria-label="店家管理">
+    <div class="flex items-end justify-between gap-4 mb-4">
+      <h2 class="text-2xl font-black">我的店家清單 <span id="total" class="text-base font-medium text-ink/60"></span></h2>
+      <button id="reset" class="text-sm underline text-ink/70 hover:text-ink">還原預設店家</button>
+    </div>
+
+    <form id="addForm" class="bg-white rounded-2xl p-5 grid sm:grid-cols-6 gap-3 mb-5">
+      <label class="sm:col-span-2 text-sm font-medium">店名
+        <input id="fName" required maxlength="30" class="mt-1 w-full rounded-lg border border-ink/20 px-3 py-2" placeholder="例：某某麵店">
+      </label>
+      <label class="text-sm font-medium">分區
+        <select id="fZone" class="mt-1 w-full rounded-lg border border-ink/20 px-3 py-2 bg-white">
+          <option>指南路</option><option>側門</option><option>山上</option>
+        </select>
+      </label>
+      <label class="text-sm font-medium">均消(元)
+        <input id="fPrice" type="number" min="0" max="2000" required value="100" class="mt-1 w-full rounded-lg border border-ink/20 px-3 py-2">
+      </label>
+      <label class="sm:col-span-2 text-sm font-medium">類型
+        <input id="fCat" maxlength="12" class="mt-1 w-full rounded-lg border border-ink/20 px-3 py-2" placeholder="例：麵食">
+      </label>
+      <label class="sm:col-span-4 text-sm font-medium">備註(選填)
+        <input id="fNote" maxlength="60" class="mt-1 w-full rounded-lg border border-ink/20 px-3 py-2" placeholder="例：招牌是乾麵，週日公休">
+      </label>
+      <label class="sm:col-span-1 flex items-end gap-2 text-sm font-medium pb-2">
+        <input id="fNear" type="checkbox" checked class="w-4 h-4 accent-[#2F6B57]"> 雨天方便
+      </label>
+      <button class="sm:col-span-1 bg-pine text-white font-bold rounded-lg px-4 py-2 hover:bg-ink">新增店家</button>
+    </form>
+
+    <ul id="list" class="grid sm:grid-cols-2 gap-3"></ul>
+    <p class="mt-8 text-xs text-ink/50">預設店家整理自公開網路分享；分區、均消為概估，營業時間與價格請以店家現況為準。資料僅存在你的瀏覽器 (LocalStorage)。</p>
+  </section>
+</div>
+
+<!-- 結果卡 -->
+<dialog id="dlg" class="rounded-3xl p-0 w-[min(92vw,26rem)] overflow-hidden backdrop:bg-ink/60">
+  <div class="h-3 bg-tag"></div>
+  <div id="dlgBody" class="p-6"></div>
+</dialog>
+
+<script>
+const KEY = 'nccu-food-v1';
+const DEFAULTS = [
+  {name:'李白 Breakfast x Coffee', zone:'指南路', price:130, cat:'早午餐', near:true,  addr:'台北市文山區指南路二段45巷5號', note:'巷子裡的早午餐與咖啡，適合慢慢吃。'},
+  {name:'敏忠小吃',               zone:'側門',   price:100, cat:'炒飯 / 蓋飯', near:true,  addr:'台北市文山區指南路二段57號', note:'份量大、偏油但好吃；糖醋魚晚點來常賣完。'},
+  {name:'Juicy Bun Burger',      zone:'指南路', price:200, cat:'美式漢堡', near:true,  addr:'台北市文山區萬壽路19號1樓', note:'招牌是牛肉辣味漢堡，聚餐聊天很適合。'},
+  {name:'葉普利麻辣鴨血臭豆腐',   zone:'側門',   price:90,  cat:'小吃 / 宵夜', near:true,  addr:'', note:'土地公廟旁老攤，羊肉羹、臭豆腐、蚵仔煎。'},
+  {name:'首思義',                 zone:'指南路', price:160, cat:'義大利麵', near:true,  addr:'', note:'政大公車站旁的意麵店。'},
+  {name:'阿里郎韓國小吃',         zone:'指南路', price:150, cat:'韓式', near:true,  addr:'', note:'蝦仁豆腐、糖醋肉是常見推薦，白飯吃到飽的好選擇。'},
+  {name:'珍妹面店',               zone:'側門',   price:110, cat:'麵食 / 南洋', near:true,  addr:'', note:'印尼辣雞、椒麻雞是學生口袋名單。'},
+  {name:'小曼谷',                 zone:'指南路', price:140, cat:'泰式', near:true,  addr:'', note:'有學生套餐，打拋豬很多人點。'},
+  {name:'小尚品火鍋',             zone:'山上',   price:250, cat:'火鍋', near:false, addr:'', note:'在達賢圖書館樓下，學生優惠請現場確認。'},
+  {name:'五行水餃',               zone:'山上',   price:80,  cat:'水餃', near:false, addr:'', note:'後山手工水餃，爬完山的獎勵。'}
+].map((s,i)=>({...s, id:'d'+i}));
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const mapUrl = s => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(s.name + ' ' + (s.addr || '政治大學'));
+
+function load(){
+  try { const s = JSON.parse(localStorage.getItem(KEY)); if (Array.isArray(s)) return s; } catch(e){}
+  return DEFAULTS.map(x => ({...x}));
+}
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(stores)); } catch(e){} }
+
+let stores = load();
+const f = { zone:'全部', budget:0, rain:false };
+let drawing = false;
+
+const pool = () => stores.filter(s =>
+  (f.zone === '全部' || s.zone === f.zone) &&
+  (!f.budget || s.price <= f.budget) &&
+  (!f.rain || s.near));
+
+const tagCls = 'inline-block rounded-full bg-mist px-2.5 py-0.5 text-xs font-medium';
+const reelHTML = s => `<p class="text-3xl sm:text-4xl font-black">${esc(s.name)}</p>
+  <p class="mt-3 flex justify-center gap-2"><span class="${tagCls}">${esc(s.zone)}</span><span class="${tagCls}">${esc(s.cat||'未分類')}</span><span class="${tagCls}">約 $${s.price}</span></p>`;
+
+function setReel(s){
+  const el = $('reel');
+  el.innerHTML = reelHTML(s);
+  el.classList.remove('reel-in'); void el.offsetWidth; el.classList.add('reel-in');
+}
+
+function render(){
+  document.querySelectorAll('.chip').forEach(b => {
+    const on = b.dataset.g === 'zone' ? f.zone === b.dataset.v : String(f.budget) === b.dataset.v;
+    b.setAttribute('aria-pressed', on);
+  });
+  $('rain').setAttribute('aria-checked', f.rain);
+  const p = pool();
+  $('cnt').textContent = p.length;
+  $('total').textContent = `(共 ${stores.length} 家)`;
+  $('drawBtn').disabled = drawing || !p.length;
+  $('hint').textContent = p.length ? '' : '沒有符合條件的店。放寬預算、換個分區，或關掉雨天模式試試。';
+  $('list').innerHTML = stores.length ? stores.map(s => `
+    <li class="bg-white rounded-xl p-4 flex items-start justify-between gap-3">
+      <div class="min-w-0">
+        <p class="font-bold truncate">${esc(s.name)}</p>
+        <p class="mt-1 flex flex-wrap gap-1.5"><span class="${tagCls}">${esc(s.zone)}</span><span class="${tagCls}">${esc(s.cat||'未分類')}</span><span class="${tagCls}">約 $${s.price}</span>${s.near ? `<span class="${tagCls} bg-rain/15 text-rain">雨天方便</span>` : ''}</p>
+        ${s.note ? `<p class="mt-2 text-sm text-ink/60">${esc(s.note)}</p>` : ''}
+      </div>
+      <button data-del="${esc(s.id)}" class="shrink-0 text-sm text-red-700 hover:underline" aria-label="刪除 ${esc(s.name)}">刪除</button>
+    </li>`).join('')
+    : '<li class="sm:col-span-2 bg-white rounded-xl p-6 text-center text-ink/60">清單是空的，先新增一家店，或按右上「還原預設店家」。</li>';
+}
+
+function draw(){
+  const p = pool();
+  if (drawing || !p.length) return;
+  drawing = true; render();
+  const winner = p[Math.floor(Math.random() * p.length)];
+  const start = Date.now(), DUR = 1500;
+  (function tick(){
+    const t = (Date.now() - start) / DUR;
+    if (t >= 1){
+      setReel(winner); drawing = false; render(); showResult(winner); return;
+    }
+    setReel(p[Math.floor(Math.random() * p.length)]);
+    setTimeout(tick, 60 + t * 140);   // 越接近結尾越慢
+  })();
+}
+
+function showResult(s){
+  $('dlgBody').innerHTML = `
+    <p class="text-sm font-bold text-pine">今天就吃這家</p>
+    <h2 class="text-3xl font-black mt-1">${esc(s.name)}</h2>
+    <p class="mt-3 flex flex-wrap gap-2"><span class="${tagCls}">${esc(s.zone)}</span><span class="${tagCls}">${esc(s.cat||'未分類')}</span><span class="${tagCls}">均消約 $${s.price}</span></p>
+    ${s.addr ? `<p class="mt-3 text-sm text-ink/70">${esc(s.addr)}</p>` : ''}
+    ${s.note ? `<p class="mt-3">${esc(s.note)}</p>` : ''}
+    <a href="${mapUrl(s)}" target="_blank" rel="noopener" class="mt-5 block text-center bg-pine text-white font-bold rounded-xl py-3 hover:bg-ink">在 Google Map 開啟</a>
+    <div class="mt-3 grid grid-cols-2 gap-3">
+      <button id="again" class="rounded-xl border border-ink/20 py-2.5 font-medium hover:bg-mist">再抽一次</button>
+      <button id="close" class="rounded-xl border border-ink/20 py-2.5 font-medium hover:bg-mist">關閉</button>
+    </div>`;
+  $('again').onclick = () => { $('dlg').close(); draw(); };
+  $('close').onclick = () => $('dlg').close();
+  $('dlg').showModal();
+}
+
+// 事件
+document.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => {
+  if (b.dataset.g === 'zone') f.zone = b.dataset.v; else f.budget = Number(b.dataset.v);
+  render();
+}));
+$('rain').addEventListener('click', () => { f.rain = !f.rain; render(); });
+$('drawBtn').addEventListener('click', draw);
+$('dlg').addEventListener('click', e => { if (e.target === $('dlg')) $('dlg').close(); });
+
+$('addForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = $('fName').value.trim();
+  if (!name) return;
+  stores.push({
+    id: 'u' + Date.now(), name, zone: $('fZone').value,
+    price: Math.max(0, Number($('fPrice').value) || 0),
+    cat: $('fCat').value.trim(), near: $('fNear').checked, addr: '', note: $('fNote').value.trim()
+  });
+  save(); e.target.reset(); $('fNear').checked = true; $('fPrice').value = 100; render();
+});
+$('list').addEventListener('click', e => {
+  const id = e.target.dataset.del;
+  if (!id) return;
+  stores = stores.filter(s => s.id !== id); save(); render();
+});
+$('reset').addEventListener('click', () => {
+  if (confirm('要還原成 10 家預設店家嗎？你新增的店家會被清除。')) {
+    stores = DEFAULTS.map(x => ({...x})); save(); render();
+  }
+});
+
+render();
+</script>
+</body>
+</html>
