@@ -27,6 +27,7 @@ tailwind.config = { theme: { extend: {
   <header class="mb-8">
     <h1 class="text-4xl sm:text-6xl font-black tracking-tight">政大今天吃什麼？</h1>
     <p class="mt-2 text-lg text-ink/70">指南山下美食防雷決策器：選好條件，剩下交給籤運。</p>
+    <p id="wx" class="mt-1 text-sm text-rain"></p>
   </header>
 
   <div class="grid lg:grid-cols-[22rem_1fr] gap-6">
@@ -39,6 +40,7 @@ tailwind.config = { theme: { extend: {
           <button class="chip rounded-full border border-ink/20 px-4 py-2 text-sm font-medium" data-g="zone" data-v="指南路">指南路</button>
           <button class="chip rounded-full border border-ink/20 px-4 py-2 text-sm font-medium" data-g="zone" data-v="側門">側門</button>
           <button class="chip rounded-full border border-ink/20 px-4 py-2 text-sm font-medium" data-g="zone" data-v="山上">山上</button>
+          <button class="chip rounded-full border border-ink/20 px-4 py-2 text-sm font-medium" data-g="zone" data-v="木柵">木柵(過橋)</button>
         </div>
       </div>
       <div>
@@ -49,6 +51,14 @@ tailwind.config = { theme: { extend: {
           <button class="chip rounded-full border border-ink/20 px-4 py-2 text-sm font-medium" data-g="budget" data-v="150">150 內</button>
         </div>
       </div>
+      <div>
+        <h2 class="font-bold mb-1">餐期</h2>
+        <p class="text-xs text-ink/50 mb-3">已依現在時間自動選好，可自行更改</p>
+        <div class="flex flex-wrap gap-2"><button class="chip rounded-full border border-ink/20 px-4 py-2 text-sm font-medium" data-g="meal" data-v="">不限</button><button class="chip rounded-full border border-ink/20 px-4 py-2 text-sm font-medium" data-g="meal" data-v="早">早餐</button><button class="chip rounded-full border border-ink/20 px-4 py-2 text-sm font-medium" data-g="meal" data-v="午">午餐</button><button class="chip rounded-full border border-ink/20 px-4 py-2 text-sm font-medium" data-g="meal" data-v="晚">晚餐</button><button class="chip rounded-full border border-ink/20 px-4 py-2 text-sm font-medium" data-g="meal" data-v="宵">宵夜</button></div>
+      </div>
+      <label class="block font-bold">想吃哪一類
+        <select id="kind" class="mt-2 w-full rounded-lg border border-ink/20 px-3 py-2 bg-white font-normal"><option value="">全部類型</option></select>
+      </label>
       <button id="rain" role="switch" aria-checked="false" class="group w-full flex items-center justify-between gap-4 rounded-xl bg-mist px-4 py-3 text-left">
         <span>
           <span class="block font-bold">雨天懶人模式</span>
@@ -86,14 +96,14 @@ tailwind.config = { theme: { extend: {
       </label>
       <label class="text-sm font-medium">分區
         <select id="fZone" class="mt-1 w-full rounded-lg border border-ink/20 px-3 py-2 bg-white">
-          <option>指南路</option><option>側門</option><option>山上</option>
+          <option>指南路</option><option>側門</option><option>山上</option><option>木柵</option>
         </select>
       </label>
       <label class="text-sm font-medium">均消(元)
         <input id="fPrice" type="number" min="0" max="2000" required value="100" class="mt-1 w-full rounded-lg border border-ink/20 px-3 py-2">
       </label>
       <label class="sm:col-span-2 text-sm font-medium">類型
-        <input id="fCat" maxlength="12" class="mt-1 w-full rounded-lg border border-ink/20 px-3 py-2" placeholder="例：麵食">
+        <select id="fCat" class="mt-1 w-full rounded-lg border border-ink/20 px-3 py-2 bg-white"></select>
       </label>
       <label class="sm:col-span-4 text-sm font-medium">備註(選填)
         <input id="fNote" maxlength="60" class="mt-1 w-full rounded-lg border border-ink/20 px-3 py-2" placeholder="例：招牌是乾麵，週日公休">
@@ -104,8 +114,9 @@ tailwind.config = { theme: { extend: {
       <button class="sm:col-span-1 bg-pine text-white font-bold rounded-lg px-4 py-2 hover:bg-ink">新增店家</button>
     </form>
 
+    <input id="q" type="search" placeholder="搜尋店名、類型、備註" class="mb-3 w-full rounded-xl border border-ink/20 bg-white px-4 py-2.5">
     <ul id="list" class="grid sm:grid-cols-2 gap-3"></ul>
-    <p class="mt-8 text-xs text-ink/50">預設店家整理自公開網路分享；分區、均消為概估，營業時間與價格請以店家現況為準。資料僅存在你的瀏覽器 (LocalStorage)。</p>
+    <p class="mt-8 text-xs text-ink/50">店名與地址整理自公開報導與學生分享；分區、均消、餐期與「雨天方便」為概估，沒有地址的店以店名搜尋地圖。營業時間與價格請以店家現況為準。資料僅存在你的瀏覽器 (LocalStorage)。</p>
   </section>
 </div>
 
@@ -116,85 +127,117 @@ tailwind.config = { theme: { extend: {
 </dialog>
 
 <script>
-const KEY = 'nccu-food-v1';
-const DEFAULTS = [
-  {name:'李白 Breakfast x Coffee', zone:'指南路', price:130, cat:'早午餐', near:true,  addr:'台北市文山區指南路二段45巷5號', note:'巷子裡的早午餐與咖啡，適合慢慢吃。'},
-  {name:'敏忠小吃',               zone:'側門',   price:100, cat:'炒飯 / 蓋飯', near:true,  addr:'台北市文山區指南路二段57號', note:'份量大、偏油但好吃；糖醋魚晚點來常賣完。'},
-  {name:'Juicy Bun Burger',      zone:'指南路', price:200, cat:'美式漢堡', near:true,  addr:'台北市文山區萬壽路19號1樓', note:'招牌是牛肉辣味漢堡，聚餐聊天很適合。'},
-  {name:'葉普利麻辣鴨血臭豆腐',   zone:'側門',   price:90,  cat:'小吃 / 宵夜', near:true,  addr:'', note:'土地公廟旁老攤，羊肉羹、臭豆腐、蚵仔煎。'},
-  {name:'首思義',                 zone:'指南路', price:160, cat:'義大利麵', near:true,  addr:'', note:'政大公車站旁的意麵店。'},
-  {name:'阿里郎韓國小吃',         zone:'指南路', price:150, cat:'韓式', near:true,  addr:'', note:'蝦仁豆腐、糖醋肉是常見推薦，白飯吃到飽的好選擇。'},
-  {name:'珍妹面店',               zone:'側門',   price:110, cat:'麵食 / 南洋', near:true,  addr:'', note:'印尼辣雞、椒麻雞是學生口袋名單。'},
-  {name:'小曼谷',                 zone:'指南路', price:140, cat:'泰式', near:true,  addr:'', note:'有學生套餐，打拋豬很多人點。'},
-  {name:'小尚品火鍋',             zone:'山上',   price:250, cat:'火鍋', near:false, addr:'', note:'在達賢圖書館樓下，學生優惠請現場確認。'},
-  {name:'五行水餃',               zone:'山上',   price:80,  cat:'水餃', near:false, addr:'', note:'後山手工水餃，爬完山的獎勵。'}
-].map((s,i)=>({...s, id:'d'+i}));
+const KEY = 'nccu-food-v2', HK = 'nccu-food-hist';
+// 類型 → 適合的餐期（早/午/晚/宵）
+const KINDS = {早餐:'早', 早午餐:'早午', 小吃:'午晚宵', 麵飯:'午晚', 異國料理:'午晚', 火鍋:'晚', 素食:'午晚', 咖啡甜點:'午', 酒館:'晚宵', 冰品:'午'};
+const S = (name,zone,price,cat,near,addr,note) => ({name,zone,price,cat,near,addr:addr||'',note:note||''});
+const T = '台北市文山區';
+const RAW = [
+  S('李白 Breakfast x Coffee','指南路',130,'早午餐',1,T+'萬壽路25巷7號1樓','招牌是厚酥皮蛋餅與牛奶吐司。'),
+  S('敏忠小吃','側門',100,'麵飯',1,T+'指南路二段57號','炒飯蓋飯份量大、偏油；糖醋魚晚來常賣完。'),
+  S('Juicy Bun Burger','指南路',200,'異國料理',1,T+'萬壽路19號1樓','美式漢堡，主餐飲料可續杯，聚餐合適。'),
+  S('葉普利麻辣鴨血臭豆腐','側門',90,'小吃',1,'','土地公廟旁老攤：羊肉羹、臭豆腐、蚵仔煎。'),
+  S('首思義','指南路',160,'異國料理',1,'','政大公車站旁的意麵店。'),
+  S('阿里郎韓國小吃','指南路',150,'異國料理',1,'','蝦仁豆腐、糖醋肉；適合聚餐，白飯管飽。'),
+  S('珍妹面店','側門',110,'麵飯',1,'','印尼辣雞、椒麻雞。'),
+  S('小曼谷','指南路',140,'異國料理',1,'','泰式料理，有學生套餐，打拋豬常被點。'),
+  S('小尚品火鍋','山上',250,'火鍋',0,'','達賢圖書館樓下；學生優惠請現場確認。'),
+  S('五行水餃','山上',80,'小吃',0,'','後山手工水餃。'),
+  S('四五大街','指南路',160,'麵飯',1,T+'指南路二段45巷5號','奶油豬排是推薦菜。'),
+  S('同洋燒臘','指南路',100,'麵飯',1,T+'指南路二段45巷2弄1號','燒臘便當，月底省錢選項。'),
+  S('江記水盆羊肉','指南路',150,'小吃',1,T+'指南路二段45巷12號','水盆羊肉。'),
+  S('金鮨日式料理','指南路',180,'異國料理',0,T+'指南路二段205號','以生魚片蓋飯聞名。'),
+  S('滇味廚房','指南路',150,'異國料理',0,T+'指南路二段167號','雲南菜，常被列為政大必吃。'),
+  S('呼嚕小酒館','指南路',250,'酒館',1,T+'指南路二段106號','白天咖啡館、晚上小酒館。'),
+  S("Schumann's Bistro NO.6",'指南路',250,'異國料理',1,T+'萬壽路6號',''),
+  S('Mr. Light 輕食先生','指南路',130,'異國料理',1,T+'新光路一段50號','輕食。'),
+  S('木柵水煎包專賣','指南路',40,'早餐',0,T+'指南路一段12號','鮮肉、玉米鮮肉、韭菜口味；早上常排隊。'),
+  S('高句麗','指南路',150,'異國料理',1,'','韓式料理，辣炒年糕。'),
+  S('敘緣小館','指南路',180,'異國料理',1,'','改良川菜，金沙豆腐，適合聚餐。'),
+  S('Ruins Coffee Roasters 小廢墟咖啡','木柵',150,'咖啡甜點',0,T+'木柵路三段242號',''),
+  S('木柵永和豆漿','木柵',70,'早餐',0,T+'木新路二段293號','煉乳起司炸饅頭。'),
+  S('泰國小普吉','木柵',130,'異國料理',0,'','木柵市場附近，泰奶有名。'),
+  S('菜根香素食','木柵',90,'素食',0,'','木柵市場攤販，只賣中午，紅燒湯麵。'),
+  S('蔬來寶','木柵',250,'素食',0,'','木新路，素食西餐。'),
+  S('daybed覓蜂食光','木柵',250,'早午餐',0,'','木新路早午餐。'),
+  S('山的另一邊','木柵',200,'早午餐',0,'','木新路早午餐。'),
+  S('孫豪記水餃','木柵',90,'小吃',0,'','木柵市場，水餃十多種口味。'),
+  S('木柵制冰所','木柵',80,'冰品',0,'','夏天才開。')
+];
+const DEF = () => RAW.map((s,i) => ({...s, id:'d'+i}));
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const mapUrl = s => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(s.name + ' ' + (s.addr || '政治大學'));
+const mapUrl = s => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(s.name + ' ' + (s.addr || '政治大學 ' + s.zone));
+const tagCls = 'inline-block rounded-full bg-mist px-2.5 py-0.5 text-xs font-medium';
 
 function load(){
   try { const s = JSON.parse(localStorage.getItem(KEY)); if (Array.isArray(s)) return s; } catch(e){}
-  return DEFAULTS.map(x => ({...x}));
+  let old = [];  // 從 v1 搬移使用者自己新增的店
+  try { old = (JSON.parse(localStorage.getItem('nccu-food-v1')) || []).filter(x => String(x.id).startsWith('u')).map(x => ({...x, cat: KINDS[x.cat] ? x.cat : '小吃'})); } catch(e){}
+  return DEF().concat(old);
 }
-function save(){ try { localStorage.setItem(KEY, JSON.stringify(stores)); } catch(e){} }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(stores)); localStorage.setItem(HK, JSON.stringify(hist)); } catch(e){} };
 
-let stores = load();
-const f = { zone:'全部', budget:0, rain:false };
-let drawing = false;
+let stores = load(), hist = [], drawing = false;
+try { hist = JSON.parse(localStorage.getItem(HK)) || []; } catch(e){}
+const nowMeal = () => { const h = new Date().getHours(); return h < 10 ? '早' : h < 15 ? '午' : h < 21 ? '晚' : '宵'; };
+const f = { zone:'全部', budget:0, rain:false, meal:nowMeal(), kind:'' };
 
-const pool = () => stores.filter(s =>
-  (f.zone === '全部' || s.zone === f.zone) &&
-  (!f.budget || s.price <= f.budget) &&
-  (!f.rain || s.near));
+const ok = s => !s.ban && (f.zone === '全部' || s.zone === f.zone) && (!f.budget || s.price <= f.budget) &&
+  (!f.rain || s.near) && (!f.meal || (KINDS[s.cat] || '午晚').includes(f.meal)) && (!f.kind || s.cat === f.kind);
+const pool = () => stores.filter(ok);
 
-const tagCls = 'inline-block rounded-full bg-mist px-2.5 py-0.5 text-xs font-medium';
+// 智能挑選：避開最近 3 次抽過的店，★最愛權重 ×3
+function pick(p){
+  let c = p.filter(s => !hist.slice(-3).includes(s.id)); if (!c.length) c = p;
+  const w = c.map(s => s.fav ? 3 : 1); let r = Math.random() * w.reduce((a,b) => a + b, 0);
+  for (let i = 0; i < c.length; i++) if ((r -= w[i]) < 0) return c[i];
+  return c[0];
+}
+
 const reelHTML = s => `<p class="text-3xl sm:text-4xl font-black">${esc(s.name)}</p>
-  <p class="mt-3 flex justify-center gap-2"><span class="${tagCls}">${esc(s.zone)}</span><span class="${tagCls}">${esc(s.cat||'未分類')}</span><span class="${tagCls}">約 $${s.price}</span></p>`;
-
+  <p class="mt-3 flex justify-center gap-2"><span class="${tagCls}">${esc(s.zone)}</span><span class="${tagCls}">${esc(s.cat)}</span><span class="${tagCls}">約 $${s.price}</span></p>`;
 function setReel(s){
-  const el = $('reel');
-  el.innerHTML = reelHTML(s);
+  const el = $('reel'); el.innerHTML = reelHTML(s);
   el.classList.remove('reel-in'); void el.offsetWidth; el.classList.add('reel-in');
 }
 
 function render(){
-  document.querySelectorAll('.chip').forEach(b => {
-    const on = b.dataset.g === 'zone' ? f.zone === b.dataset.v : String(f.budget) === b.dataset.v;
-    b.setAttribute('aria-pressed', on);
-  });
+  document.querySelectorAll('.chip').forEach(b => b.setAttribute('aria-pressed', String(f[b.dataset.g]) === b.dataset.v));
   $('rain').setAttribute('aria-checked', f.rain);
-  const p = pool();
+  $('kind').value = f.kind;
+  const p = pool(), q = $('q').value.trim().toLowerCase();
+  const rows = stores.filter(s => !q || (s.name + s.cat + s.zone + s.note).toLowerCase().includes(q));
   $('cnt').textContent = p.length;
-  $('total').textContent = `(共 ${stores.length} 家)`;
+  $('total').textContent = `(共 ${stores.length} 家，目前可抽 ${p.length} 家)`;
   $('drawBtn').disabled = drawing || !p.length;
-  $('hint').textContent = p.length ? '' : '沒有符合條件的店。放寬預算、換個分區，或關掉雨天模式試試。';
-  $('list').innerHTML = stores.length ? stores.map(s => `
-    <li class="bg-white rounded-xl p-4 flex items-start justify-between gap-3">
+  $('hint').textContent = p.length ? '智能防雷：最近抽過的店先避開、★最愛機率 ×3、標「雷」的店不會被抽到。' : '沒有符合條件的店。放寬預算或餐期、換個分區，或關掉雨天模式試試。';
+  $('list').innerHTML = rows.length ? rows.map(s => `
+    <li class="bg-white rounded-xl p-4 flex items-start justify-between gap-3 ${s.ban ? 'opacity-50' : ''}">
       <div class="min-w-0">
-        <p class="font-bold truncate">${esc(s.name)}</p>
-        <p class="mt-1 flex flex-wrap gap-1.5"><span class="${tagCls}">${esc(s.zone)}</span><span class="${tagCls}">${esc(s.cat||'未分類')}</span><span class="${tagCls}">約 $${s.price}</span>${s.near ? `<span class="${tagCls} bg-rain/15 text-rain">雨天方便</span>` : ''}</p>
+        <p class="font-bold">${s.fav ? '<span class="text-amber-500">★ </span>' : ''}${esc(s.name)}</p>
+        <p class="mt-1 flex flex-wrap gap-1.5"><span class="${tagCls}">${esc(s.zone)}</span><span class="${tagCls}">${esc(s.cat)}</span><span class="${tagCls}">約 $${s.price}</span>${s.near ? `<span class="${tagCls} bg-rain/15 text-rain">雨天方便</span>` : ''}</p>
         ${s.note ? `<p class="mt-2 text-sm text-ink/60">${esc(s.note)}</p>` : ''}
+        <a href="${mapUrl(s)}" target="_blank" rel="noopener" class="mt-2 inline-block text-sm text-pine underline">Google Map</a>
       </div>
-      <button data-del="${esc(s.id)}" class="shrink-0 text-sm text-red-700 hover:underline" aria-label="刪除 ${esc(s.name)}">刪除</button>
-    </li>`).join('')
-    : '<li class="sm:col-span-2 bg-white rounded-xl p-6 text-center text-ink/60">清單是空的，先新增一家店，或按右上「還原預設店家」。</li>';
+      <div class="shrink-0 flex flex-col items-end gap-1 text-sm">
+        <button data-a="fav" data-id="${esc(s.id)}" class="${s.fav ? 'text-amber-600 font-bold' : 'text-ink/50'} hover:underline">${s.fav ? '★ 最愛' : '☆ 最愛'}</button>
+        <button data-a="ban" data-id="${esc(s.id)}" class="${s.ban ? 'text-ink font-bold' : 'text-ink/50'} hover:underline">${s.ban ? '解除雷店' : '標為雷'}</button>
+        <button data-a="del" data-id="${esc(s.id)}" class="text-red-700 hover:underline" aria-label="刪除 ${esc(s.name)}">刪除</button>
+      </div>
+    </li>`).join('') : '<li class="sm:col-span-2 bg-white rounded-xl p-6 text-center text-ink/60">找不到店家。換個關鍵字，或新增一家。</li>';
 }
 
 function draw(){
-  const p = pool();
-  if (drawing || !p.length) return;
+  const p = pool(); if (drawing || !p.length) return;
   drawing = true; render();
-  const winner = p[Math.floor(Math.random() * p.length)];
-  const start = Date.now(), DUR = 1500;
+  const winner = pick(p), start = Date.now(), DUR = 1500;
   (function tick(){
     const t = (Date.now() - start) / DUR;
-    if (t >= 1){
-      setReel(winner); drawing = false; render(); showResult(winner); return;
-    }
+    if (t >= 1){ setReel(winner); drawing = false; hist = hist.concat(winner.id).slice(-8); save(); render(); showResult(winner); return; }
     setReel(p[Math.floor(Math.random() * p.length)]);
-    setTimeout(tick, 60 + t * 140);   // 越接近結尾越慢
+    setTimeout(tick, 60 + t * 140);
   })();
 }
 
@@ -202,12 +245,14 @@ function showResult(s){
   $('dlgBody').innerHTML = `
     <p class="text-sm font-bold text-pine">今天就吃這家</p>
     <h2 class="text-3xl font-black mt-1">${esc(s.name)}</h2>
-    <p class="mt-3 flex flex-wrap gap-2"><span class="${tagCls}">${esc(s.zone)}</span><span class="${tagCls}">${esc(s.cat||'未分類')}</span><span class="${tagCls}">均消約 $${s.price}</span></p>
+    <p class="mt-3 flex flex-wrap gap-2"><span class="${tagCls}">${esc(s.zone)}</span><span class="${tagCls}">${esc(s.cat)}</span><span class="${tagCls}">均消約 $${s.price}</span></p>
     ${s.addr ? `<p class="mt-3 text-sm text-ink/70">${esc(s.addr)}</p>` : ''}
     ${s.note ? `<p class="mt-3">${esc(s.note)}</p>` : ''}
     <a href="${mapUrl(s)}" target="_blank" rel="noopener" class="mt-5 block text-center bg-pine text-white font-bold rounded-xl py-3 hover:bg-ink">在 Google Map 開啟</a>
     <div class="mt-3 grid grid-cols-2 gap-3">
-      <button id="again" class="rounded-xl border border-ink/20 py-2.5 font-medium hover:bg-mist">再抽一次</button>
+      <button data-a="fav" data-id="${esc(s.id)}" class="rounded-xl border border-ink/20 py-2.5 font-medium hover:bg-mist">${s.fav ? '★ 已加入最愛' : '☆ 加入最愛'}</button>
+      <button data-a="ban" data-id="${esc(s.id)}" class="rounded-xl border border-ink/20 py-2.5 font-medium hover:bg-mist">這家有雷，別再抽</button>
+      <button id="again" class="rounded-xl bg-tag font-bold py-2.5">再抽一次</button>
       <button id="close" class="rounded-xl border border-ink/20 py-2.5 font-medium hover:bg-mist">關閉</button>
     </div>`;
   $('again').onclick = () => { $('dlg').close(); draw(); };
@@ -216,35 +261,44 @@ function showResult(s){
 }
 
 // 事件
+Object.keys(KINDS).forEach(k => { $('kind').add(new Option(k, k)); $('fCat').add(new Option(k, k)); });
 document.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => {
-  if (b.dataset.g === 'zone') f.zone = b.dataset.v; else f.budget = Number(b.dataset.v);
-  render();
+  f[b.dataset.g] = b.dataset.g === 'budget' ? Number(b.dataset.v) : b.dataset.v; render();
 }));
+$('kind').addEventListener('change', e => { f.kind = e.target.value; render(); });
+$('q').addEventListener('input', render);
 $('rain').addEventListener('click', () => { f.rain = !f.rain; render(); });
 $('drawBtn').addEventListener('click', draw);
 $('dlg').addEventListener('click', e => { if (e.target === $('dlg')) $('dlg').close(); });
 
+document.addEventListener('click', e => {   // 最愛 / 雷店 / 刪除
+  const b = e.target.closest('[data-a]'); if (!b) return;
+  const s = stores.find(x => x.id === b.dataset.id); if (!s) return;
+  const a = b.dataset.a;
+  if (a === 'del') stores = stores.filter(x => x !== s);
+  else { s[a] = !s[a]; if (a === 'ban' && s.ban) s.fav = false; if (a === 'fav' && s.fav) s.ban = false; }
+  save(); render();
+  if (b.closest('dialog')) { if (s.ban) $('dlg').close(); else b.textContent = s.fav ? '★ 已加入最愛' : '☆ 加入最愛'; }
+});
+
 $('addForm').addEventListener('submit', e => {
   e.preventDefault();
-  const name = $('fName').value.trim();
-  if (!name) return;
-  stores.push({
-    id: 'u' + Date.now(), name, zone: $('fZone').value,
-    price: Math.max(0, Number($('fPrice').value) || 0),
-    cat: $('fCat').value.trim(), near: $('fNear').checked, addr: '', note: $('fNote').value.trim()
-  });
+  const name = $('fName').value.trim(); if (!name) return;
+  stores.push({ id:'u' + Date.now(), name, zone:$('fZone').value, price:Math.max(0, Number($('fPrice').value) || 0),
+    cat:$('fCat').value, near:$('fNear').checked, addr:'', note:$('fNote').value.trim() });
   save(); e.target.reset(); $('fNear').checked = true; $('fPrice').value = 100; render();
 });
-$('list').addEventListener('click', e => {
-  const id = e.target.dataset.del;
-  if (!id) return;
-  stores = stores.filter(s => s.id !== id); save(); render();
-});
 $('reset').addEventListener('click', () => {
-  if (confirm('要還原成 10 家預設店家嗎？你新增的店家會被清除。')) {
-    stores = DEFAULTS.map(x => ({...x})); save(); render();
-  }
+  if (confirm('要還原成預設的 ' + RAW.length + ' 家店嗎？你新增、標記的內容都會被清除。')) { stores = DEF(); hist = []; save(); render(); }
 });
+
+// 依 NCCU 位置查即時天氣，下雨就自動開雨天懶人模式
+fetch('https://api.open-meteo.com/v1/forecast?latitude=24.988&longitude=121.576&current=temperature_2m,precipitation')
+  .then(r => r.json()).then(d => {
+    const c = d.current, rain = c.precipitation > 0;
+    $('wx').textContent = `木柵現在 ${Math.round(c.temperature_2m)}°C，${rain ? '正在下雨，已幫你開啟雨天懶人模式' : '目前沒下雨'}`;
+    if (rain) { f.rain = true; render(); }
+  }).catch(() => {});
 
 render();
 </script>
